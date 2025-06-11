@@ -7,7 +7,7 @@ export async function submitScore(req, res) {
   const userId = req.user.userId;
 
   await prisma.score.create({ data: { gameId, value: score, userId } });
-  await redis.zAdd(`leaderboard:${gameId}`, [{ score, value: userId }]);
+  await redis.zAdd(`leaderboard:${gameId}`, { score, value: userId.toString() });
 
   res.json({ message: 'Score submitted' });
 }
@@ -15,7 +15,7 @@ export async function submitScore(req, res) {
 export async function getLeaderboard(req, res) {
   const { gameId } = req.params;
 
-  const result = await redis.zRevRange(`leaderboard:${gameId}`, 0, 9, { WITHSCORES: true });
+  const result = await redis.zRange(`leaderboard:${gameId}`, 0, 9, { REV: true, WITHSCORES: true });
 
   const top = [];
   for (let i = 0; i < result.length; i += 2) {
@@ -28,19 +28,19 @@ export async function getLeaderboard(req, res) {
   res.json(top);
 }
 
-
 export async function getUserRank(req, res) {
   const { gameId } = req.params;
   const userId = req.user.userId;
-  const rank = await redis.zRevRank(`leaderboard:${gameId}`, userId);
+  const rank = await redis.zRank(`leaderboard:${gameId}`, userId.toString(), { REV: true });
   res.json({ rank: rank !== null ? rank + 1 : 'Unranked' });
 }
+
 export async function getUserScoreAndRank(req, res) {
   const { gameId } = req.params;
   const userId = req.user.userId;
 
   const score = await redis.zScore(`leaderboard:${gameId}`, userId.toString());
-  const rank = await redis.zRevRank(`leaderboard:${gameId}`, userId.toString());
+  const rank = await redis.zRank(`leaderboard:${gameId}`, userId.toString(), { REV: true });
 
   if (score === null) {
     return res.status(404).json({ error: 'No score found for this game' });
