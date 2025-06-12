@@ -31,6 +31,7 @@ export async function getLeaderboard(req, res) {
 export async function getUserRank(req, res) {
   const { gameId } = req.params;
   const userId = req.user.userId;
+  console.log("user id", user)
   const rank = await redis.zRank(`leaderboard:${gameId}`, userId.toString(), { REV: true });
   res.json({ rank: rank !== null ? rank + 1 : 'Unranked' });
 }
